@@ -1,9 +1,17 @@
+import os
 from dataclasses import dataclass
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 @dataclass
-class Settings:
-    BOT_TOKEN: str = "8504854653:AAFZ2_szsVnlXekrIEiVQIO77pac5ovrnc0"
+class Config:
+    bot_token: str
 
 
-settings = Settings()
+def load_config() -> Config:
+    token = os.getenv("BOT_TOKEN")
+    if not token:
+        raise RuntimeError("BOT_TOKEN is not set")
+    return Config(bot_token=token)
