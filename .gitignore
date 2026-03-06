@@ -34,6 +34,7 @@ venv/
 *.sqlite3
 media/
 staticfiles/
+bot.db
 
 # Packaging / build artifacts
 build/
