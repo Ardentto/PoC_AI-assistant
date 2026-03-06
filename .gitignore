@@ -1,3 +1,61 @@
+# Data
+data/
+*.csv
+*.parquet
+*.pkl
+*.pth
+*.h5
+
+# Environment
 .env
-__pychache__
-.vscode
+.env.local
+
+# IDE / editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Logs
+logs/
+*.log
+
+# Venv
+venv/
+.venv/
+
+# Django / DB
+*.sqlite3
+media/
+staticfiles/
+
+# Packaging / build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Test / coverage reports
+.coverage
+.coverage.*
+htmlcov/
+.cover/
+.tox/
+.nox/
+pytestdebug.log
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini

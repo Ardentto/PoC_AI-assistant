@@ -6,10 +6,19 @@ from keyboards import request_card_for_company_kb
 def format_request_text(req_id: int, data: dict) -> str:
     return (
         f"📩 Новая заявка #{req_id}\n\n"
-        f"Что нужно: {data.get('need')}\n"
-        f"Город/район: {data.get('city')}\n"
-        f"Бюджет: {data.get('budget')}\n"
-        f"Ограничения: {data.get('constraints')}\n"
+        f"Под крышей (м²): {data.get('area_under_roof_m2') or '-'}\n"
+        f"Внутри стен (м²): {data.get('area_inside_walls_m2') or '-'}\n"
+        f"Застеклённые (м²): {data.get('glazed_area_m2') or '-'}\n"
+        f"2-й свет (м²): {data.get('second_light_m2') or '-'}\n"
+        f"Тип кровли: {data.get('roof_type') or '-'}\n"
+        f"Стиль кровли: {data.get('roof_style') or '-'}\n"
+        f"Конструктив: {data.get('structure') or '-'}\n"
+        f"Этажность: {data.get('floors') or '-'}\n"
+        f"Отделка стен: {data.get('wall_finish') or '-'}\n"
+        f"Фундамент: {data.get('foundation') or '-'}\n"
+        f"Удалённость: {data.get('distance') or '-'}\n"
+        f"Рассрочка: {data.get('installments') or '-'}\n"
+        f"Септик: {data.get('septic') or '-'}\n"
     )
 
 
@@ -27,7 +36,6 @@ async def broadcast_request(bot: Bot, req_id: int, data: dict) -> int:
             )
             sent += 1
         except Exception:
-            # в PoC просто игнорируем ошибки отправки
             pass
 
     return sent
