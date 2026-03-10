@@ -19,9 +19,11 @@ async def main():
     bot = Bot(token=cfg.bot_token)
     dp = Dispatcher(storage=MemoryStorage())
 
-    # Dependency Injection: будет доступно в хендлерах как параметр ai_intake
     dp["ai_intake"] = AIIntakeService(
-        api_key=cfg.openai_api_key, model=cfg.openai_model
+        api_key=cfg.requesty_api_key,
+        base_url=cfg.requesty_base_url,
+        model=cfg.requesty_model,
+        temperature=cfg.requesty_temperature,
     )
 
     dp.include_router(common_router)

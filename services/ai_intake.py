@@ -1,33 +1,8 @@
 import json
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 from openai import AsyncOpenAI
-
-
-JSON_SCHEMA = {
-    "name": "intake_eval",
-    "schema": {
-        "type": "object",
-        "additionalProperties": False,
-        "properties": {
-            "is_answered": {"type": "boolean"},
-            "need_clarify": {"type": "boolean"},
-            "clarify_question": {"type": ["string", "null"]},
-            "value": {"type": ["string", "null"]},
-            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-            "notes": {"type": ["string", "null"]},
-        },
-        "required": [
-            "is_answered",
-            "need_clarify",
-            "clarify_question",
-            "value",
-            "confidence",
-            "notes",
-        ],
-    },
-}
 
 
 @dataclass(frozen=True)
@@ -41,9 +16,19 @@ class IntakeEval:
 
 
 class AIIntakeService:
-    def __init__(self, api_key: str, model: str):
-        self.client = AsyncOpenAI(api_key=api_key)
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str,
+        model: str,
+        temperature: float = 0.8,
+    ):
+        self.client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+        )
         self.model = model
+        self.temperature = temperature
 
     async def evaluate(
         self,
@@ -52,70 +37,60 @@ class AIIntakeService:
         user_answer: str,
         collected: Dict[str, str],
     ) -> IntakeEval:
-        system = (
-            "Ты ассистент строительной компании. "
-            "Тебе задают вопрос анкеты (field_question) и дают ответ клиента (user_answer). "
-            "Определи, ответил ли клиент на этот вопрос.\n\n"
-            "Правила:\n"
-            "1) Если клиент ответил 'не знаю', 'не решил', 'не нужно', 'не требуется' — "
-            "это тоже может считаться ответом (is_answered=true), если закрывает вопрос.\n"
-            "2) Если ответ двусмысленный/неполный — need_clarify=true и дай короткий уточняющий вопрос.\n"
-            "3) Если ответ содержит значение — извлеки value (строкой, человекочитаемо). "
-            "Для площадей возвращай формат вроде '120 м²' если возможно.\n"
-            "4) Верни строго JSON по схеме."
-        )
+        prompt = f"""
+Ты ассистент строительной компании.
+Тебе нужно понять, ответил ли клиент на конкретный вопрос анкеты.
 
-        payload = {
-            "field_key": field_key,
-            "field_question": field_question,
-            "user_answer": user_answer,
-            "already_collected": collected,
-            "hints": [
-                "Если вопрос про рассрочку: value = 'да'/'нет'/'обсудить'/'не знаю'.",
-                "Если вопрос про септик: value = 'нужен'/'не нужен'/'обсудить'/'не знаю'.",
-                "Если вопрос про этажность: value например '1', '2', '1.5'.",
-            ],
-        }
+Верни только JSON:
+{{
+  "is_answered": true,
+  "need_clarify": false,
+  "clarify_question": null,
+  "value": "130 м²",
+  "confidence": 0.95,
+  "notes": null
+}}
 
-        resp = await self.client.responses.create(
+Текущий ключ поля: {field_key}
+Текущий вопрос: {field_question}
+Уже собранные данные: {json.dumps(collected, ensure_ascii=False)}
+Ответ клиента: {user_answer}
+
+Правила:
+- Если клиент явно ответил по существу, is_answered=true.
+- Если ответ неполный или двусмысленный, need_clarify=true и задай короткий уточняющий вопрос.
+- Для площадей value старайся давать в виде '130 м²'.
+- Для да/нет вопросов сохраняй value как 'да', 'нет', 'обсудить', 'не знаю'.
+- Не пиши ничего кроме JSON.
+""".strip()
+
+        resp = await self.client.chat.completions.create(
             model=self.model,
-            input=[
-                {"role": "system", "content": system},
+            temperature=self.temperature,
+            messages=[
                 {
-                    "role": "user",
-                    "content": json.dumps(payload, ensure_ascii=False),
+                    "role": "system",
+                    "content": "Ты извлекаешь структурированные данные из ответов клиента.",
                 },
+                {"role": "user", "content": prompt},
             ],
-            text={
-                "format": {
-                    "type": "json_schema",
-                    "name": JSON_SCHEMA["name"],  # <-- важно
-                    "schema": JSON_SCHEMA["schema"],  # <-- важно
-                    "strict": True,
-                }
-            },
         )
 
-        # В разных версиях SDK удобное поле может отличаться — делаем максимально устойчиво
-        raw = getattr(resp, "output_text", None)
-        if not raw:
-            # fallback: пробуем собрать текст из output
-            raw = ""
-            try:
-                for item in resp.output:
-                    for c in getattr(item, "content", []) or []:
-                        if getattr(c, "type", None) in ("output_text", "text"):
-                            raw += getattr(c, "text", "") or ""
-            except Exception:
-                pass
+        text = resp.choices[0].message.content.strip()
 
-        data: Dict[str, Any] = json.loads(raw)
+        # если модель завернула JSON в ```json ... ```
+        if text.startswith("```"):
+            text = text.strip("`").strip()
+            if text.lower().startswith("json"):
+                text = text[4:].strip()
+
+        data = json.loads(text)
 
         return IntakeEval(
-            is_answered=bool(data["is_answered"]),
-            need_clarify=bool(data["need_clarify"]),
-            clarify_question=data["clarify_question"],
-            value=data["value"],
-            confidence=float(data["confidence"]),
-            notes=data["notes"],
+            is_answered=bool(data.get("is_answered")),
+            need_clarify=bool(data.get("need_clarify")),
+            clarify_question=data.get("clarify_question"),
+            value=data.get("value"),
+            confidence=float(data.get("confidence") or 0.0),
+            notes=data.get("notes"),
         )
