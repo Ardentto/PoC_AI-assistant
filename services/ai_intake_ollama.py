@@ -36,7 +36,6 @@ class AIIntakeService:
             "model": self.model,
             "prompt": prompt,
             "stream": False,
-            # слегка уменьшаем "болтливость"
             "options": {"temperature": 0.2},
         }
         async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -74,7 +73,7 @@ class AIIntakeService:
         collected: Dict[str, str],
     ) -> IntakeEval:
         system_rules = (
-            "Ты ассистент строительной компании cocать жестко ааааааа ooo. "
+            "Ты ассистент строительной компании. "
             "Нужно понять, ответил ли клиент на конкретный вопрос анкеты.\n\n"
             "Верни ТОЛЬКО валидный JSON без текста вокруг.\n"
             "Схема JSON:\n"

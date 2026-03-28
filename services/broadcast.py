@@ -6,9 +6,17 @@ from keyboards import request_card_for_company_kb
 def format_request_text(req_id: int, data: dict) -> str:
     return (
         f"📩 Новая заявка #{req_id}\n\n"
+        f"Клиент: {data.get('client_name') or '-'}\n"
+        f"Локация: {data.get('lead_location') or '-'}\n"
+        f"Участок: {data.get('has_land') or '-'}\n"
+        f"Старт строительства: {data.get('start_timeline') or '-'}\n"
+        f"Контакт: {data.get('lead_contact') or '-'}\n\n"
+
+        f"Цель покупки: {data.get('purchase_goal') or '-'}\n"
+        f"Бюджет: {data.get('budget') or '-'}\n"
         f"Под крышей (м²): {data.get('area_under_roof_m2') or '-'}\n"
         f"Внутри стен (м²): {data.get('area_inside_walls_m2') or '-'}\n"
-        f"Застеклённые (м²): {data.get('glazed_area_m2') or '-'}\n"
+        f"Остекление (м²): {data.get('glazed_area_m2') or '-'}\n"
         f"2-й свет (м²): {data.get('second_light_m2') or '-'}\n"
         f"Тип кровли: {data.get('roof_type') or '-'}\n"
         f"Стиль кровли: {data.get('roof_style') or '-'}\n"
